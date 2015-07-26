@@ -1,0 +1,22 @@
+---
+- name: Check for existing user
+  local_action: "shell ssh {{ ansible_ssh_user }}@{{ inventory_hostname }} whoami || echo {{ init_user_admin }}"
+  register: init_user_ssh
+
+- name: Set user name
+  set_fact: init_user_name="{{ ansible_ssh_user }}"
+
+- include: create_user.yml
+
+- name: Grant passwordless sudo access to user
+  template:
+    src: etc/sudoers.d/user.j2
+    dest: "/etc/sudoers.d/{{ init_user_name }}"
+    owner: root
+    group: root
+    mode: 0440
+    validate: visudo -cf %s
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+
+- include: ssh_access.yml

@@ -1,0 +1,28 @@
+---
+- name: Create user-specific group
+  group: name={{ init_user_name }}
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+
+- name: Create new user
+  user:
+    name: "{{ init_user_name }}"
+    group: "{{ init_user_name }}"
+    shell: "{{ init_user_shell }}"
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+
+- name: Create additional groups
+  group: name={{ item }}
+  with_items: "{{ init_user_groups }}"
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+
+- name: Add user to additional groups
+  user:
+    name: "{{ init_user_name }}"
+    groups: "{{ item }}"
+    append: yes
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+  with_items: "{{ init_user_groups }}"

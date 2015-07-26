@@ -1,0 +1,40 @@
+---
+- name: Create .ssh folder in user's home
+  file:
+    path: /home/{{ init_user_name }}/.ssh
+    state: directory
+    owner: "{{ init_user_name }}"
+    group: "{{ init_user_name }}"
+    mode: 0700
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+
+- name: Check if authorized_keys exists
+  stat: path=/home/{{ init_user_name }}/.ssh/authorized_keys
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+  register: authorized_keys
+
+- name: Set authorized key for user
+  authorized_key:
+    user: "{{ init_user_name }}"
+    key: "{{ lookup('file', init_user_auth_key) }}"
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+  when: "not authorized_keys.stat.exists
+         and not init_user_root_has_key"
+
+- name: Copy the authorized_keys from the root user
+  command: cp /root/.ssh/authorized_keys /home/{{ init_user_name }}/.ssh/authorized_keys
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
+  when: "not authorized_keys.stat.exists
+         and init_user_root_has_key"
+
+- name: Set ownership of authorized_keys
+  file:
+    path: /home/{{ init_user_name }}/.ssh/authorized_keys
+    owner: "{{ init_user_name }}"
+    group: "{{ init_user_name }}"
+  remote_user: "{{ init_user_ssh.stdout }}"
+  become: yes
